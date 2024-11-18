@@ -1,107 +1,109 @@
-#include <stdio.h>
 #include <iostream>
-
+#include <vector>
+#include <algorithm>
 using namespace std;
-struct process {
-    char name; // Tên tiến trình
-    int arrivalTime, burstTime, waitingTime, turnAroundTime, remainingTime, completionTime;
-} Q1[10], Q2[10], Q3[10]; // Ba hàng đợi
 
-int n; // Số lượng tiến trình
+struct Process {
+    char name;
+    int ArrivalTime, BurstTime, WaitingTime, TurnaroundTime, RemainingTime, CompletionTime;
+};
 
-// Hàm sắp xếp tiến trình theo thời gian đến
-void sortByArrival() {
-    struct process temp;
-    int i, j;
-    for (i = 0; i < n; i++) {
-        for (j = i + 1; j < n; j++) {
-            if (Q1[i].arrivalTime > Q1[j].arrivalTime) {
-                temp = Q1[i];
-                Q1[i] = Q1[j];
-                Q1[j] = temp;
-            }
-        }
-    }
+vector<Process> Queue1, Queue2, Queue3;
+
+void sortByArrival(vector<Process>& queue) {
+    sort(queue.begin(), queue.end(), [](const Process& a, const Process& b) {
+        return a.ArrivalTime < b.ArrivalTime;
+    });
 }
 
 int main() {
-    int i, j, k = 0, r = 0, time = 0, tq1 = 5, tq2 = 8, flag = 0;
+    int n, tq1 = 5, tq2 = 8, time = 0, k = 0, r = 0, flag = 0;
     char c;
-    printf("Enter number of processes: ");
-    scanf("%d", &n);
 
-    for (i = 0, c = 'A'; i < n; i++, c++) {
-        Q1[i].name = c;
-        printf("\nEnter the arrival time and burst time of process %c: ", Q1[i].name);
-        scanf("%d%d", &Q1[i].arrivalTime, &Q1[i].burstTime);
-        Q1[i].remainingTime = Q1[i].burstTime; // Khởi tạo thời gian còn lại bằng burst time
+    cout << "Enter the number of processes: ";
+    cin >> n;
+
+    // Nhập thông tin các process cho Queue1
+    for (int i = 0; i < n; i++) {
+        Process p;
+        p.name = 'A' + i;
+        cout << "\nEnter the arrival time and burst time of process " << p.name << ": ";
+        cin >> p.ArrivalTime >> p.BurstTime;
+        p.RemainingTime = p.BurstTime;
+        Queue1.push_back(p);
     }
 
-    sortByArrival();
-    time = Q1[0].arrivalTime;
-    
-    printf("\nProcesses in Queue 1 (RR with quantum = 5):\n");
-    printf("Process\tQueue\t\tRemaining Time\tWaiting Time\tTurnaround Time\n");
+    // Sắp xếp các process theo ArrivalTime
+    sortByArrival(Queue1);
 
-    for (i = 0; i < n; i++) {
-        if (Q1[i].remainingTime <= tq1) { // Nếu tiến trình hoàn tất trong Queue 1
-            time += Q1[i].remainingTime;
-            Q1[i].remainingTime = 0;
-            Q1[i].waitingTime = time - Q1[i].arrivalTime - Q1[i].burstTime;
-            Q1[i].turnAroundTime = time - Q1[i].arrivalTime;
-            printf("%c\tQueue 1\t\t%d\t\t%d\t\t%d\n", Q1[i].name, Q1[i].burstTime, Q1[i].waitingTime, Q1[i].turnAroundTime);
-        } else { // Nếu tiến trình chưa hoàn tất, chuyển sang Queue 2
-            Q2[k].waitingTime = time;
+    // Xử lý Queue1 (Round Robin với tq = 5)
+    time = Queue1[0].ArrivalTime;
+    cout << "Processes in first queue (RR with qt = 5):\n";
+    cout << "Process\tRemainingTime\tWaitingTime\tTurnaroundTime\n";
+
+    for (size_t i = 0; i < Queue1.size(); i++) {
+        if (Queue1[i].RemainingTime <= tq1) {
+            time += Queue1[i].RemainingTime;
+            Queue1[i].RemainingTime = 0;
+            Queue1[i].CompletionTime = time;
+            Queue1[i].TurnaroundTime = Queue1[i].CompletionTime - Queue1[i].ArrivalTime;
+            Queue1[i].WaitingTime = Queue1[i].TurnaroundTime - Queue1[i].BurstTime;
+            cout << Queue1[i].name << "\t" << Queue1[i].BurstTime << "\t\t" 
+                 << Queue1[i].WaitingTime << "\t\t" << Queue1[i].TurnaroundTime << "\t\t"
+                 << Queue1[i].CompletionTime <<"\n";
+        } else {
+            Process temp = Queue1[i];
             time += tq1;
-            Q1[i].remainingTime -= tq1;
-            Q2[k].burstTime = Q1[i].remainingTime;
-            Q2[k].remainingTime = Q2[k].burstTime;
-            Q2[k].name = Q1[i].name;
-            printf("%c\tQueue 1\t\t%d\t\t-\t\t-\n", Q1[i].name, Q1[i].burstTime);
-            k++;
+            temp.RemainingTime -= tq1;
+            temp.WaitingTime = time;
+            Queue2.push_back(temp);
             flag = 1;
         }
     }
 
+    // Xử lý Queue2 (Round Robin với tq = 8)
     if (flag == 1) {
-        printf("\nProcesses in Queue 2 (RR with quantum = 8):\n");
-        printf("Process\tQueue\t\tRemaining Time\tWaiting Time\tTurnaround Time\n");
-    }
+        cout << "\nProcesses in second queue (RR with qt = 8):\n";
+        cout << "Process\tRemainingTime\tWaitingTime\tTurnaroundTime\tCompletionTime\n";
 
-    for (i = 0; i < k; i++) {
-        if (Q2[i].remainingTime <= tq2) { // Nếu tiến trình hoàn tất trong Queue 2
-            time += Q2[i].remainingTime;
-            Q2[i].remainingTime = 0;
-            Q2[i].waitingTime = time - Q1[i].arrivalTime - Q2[i].burstTime;
-            Q2[i].turnAroundTime = time - Q1[i].arrivalTime;
-            printf("%c\tQueue 2\t\t%d\t\t%d\t\t%d\n", Q2[i].name, Q2[i].burstTime, Q2[i].waitingTime, Q2[i].turnAroundTime);
-        } else { // Nếu tiến trình chưa hoàn tất, chuyển sang Queue 3
-            Q3[r].arrivalTime = time;
-            time += tq2;
-            Q2[i].remainingTime -= tq2;
-            Q3[r].burstTime = Q2[i].remainingTime;
-            Q3[r].remainingTime = Q3[r].burstTime;
-            Q3[r].name = Q2[i].name;
-            printf("%c\tQueue 2\t\t%d\t\t-\t\t-\n", Q2[i].name, Q2[i].burstTime);
-            r++;
-            flag = 2;
+        for (size_t i = 0; i < Queue2.size(); i++) {
+            if (Queue2[i].RemainingTime <= tq2) {
+                time += Queue2[i].RemainingTime;
+                Queue2[i].RemainingTime = 0;
+                Queue2[i].CompletionTime = time;
+                Queue2[i].TurnaroundTime = Queue2[i].CompletionTime - Queue2[i].ArrivalTime;
+                Queue2[i].WaitingTime = Queue2[i].TurnaroundTime - Queue2[i].BurstTime;
+                cout << Queue2[i].name << "\t" << Queue2[i].BurstTime << "\t\t" 
+                     << Queue2[i].WaitingTime << "\t\t" << Queue2[i].TurnaroundTime << "\t\t"
+                     << Queue2[i].CompletionTime << "\n";
+            } else {
+                Process temp = Queue2[i];
+                time += tq2;
+                temp.RemainingTime -= tq2;
+                Queue3.push_back(temp);
+                flag = 2;
+            }
         }
     }
-    cout<< flag;
+
+    // Xử lý Queue3 (FCFS)
     if (flag == 2) {
-        printf("\nProcesses in Queue 3 (FCFS):\n");
-        printf("Process\tQueue\t\tRemaining Time\tWaiting Time\tTurnaround Time\n");
-    }
+        cout << "\nProcesses in third queue (FCFS):\n";
+        cout << "Process\tBurstTime\tWaitingTime\tTurnaroundTime\tCompletionTime\n";
 
-    for (i = 0; i < r; i++) {
-        if (i == 0) {
-            Q3[i].completionTime = Q3[i].burstTime + time - tq1 - tq2;
-        } else {
-            Q3[i].completionTime = Q3[i - 1].completionTime + Q3[i].burstTime;
+        for (size_t i = 0; i < Queue3.size(); i++) {
+            if (i == 0)
+                Queue3[i].CompletionTime = time + Queue3[i].RemainingTime;
+            else
+                Queue3[i].CompletionTime = Queue3[i - 1].CompletionTime + Queue3[i].RemainingTime;
+
+            Queue3[i].TurnaroundTime = Queue3[i].CompletionTime - Queue3[i].ArrivalTime;
+            Queue3[i].WaitingTime = Queue3[i].TurnaroundTime - Queue3[i].BurstTime;
+
+            cout << Queue3[i].name << "\t" << Queue3[i].BurstTime << "\t\t" 
+                 << Queue3[i].WaitingTime << "\t\t" << Queue3[i].TurnaroundTime << "\t\t"
+                 << Queue3[i].CompletionTime << "\n";
         }
-        Q3[i].turnAroundTime = Q3[i].completionTime;
-        Q3[i].waitingTime = Q3[i].turnAroundTime - Q3[i].burstTime;
-        printf("%c\tQueue 3\t\t%d\t\t%d\t\t%d\n", Q3[i].name, Q3[i].burstTime, Q3[i].waitingTime, Q3[i].turnAroundTime);
     }
 
     return 0;
